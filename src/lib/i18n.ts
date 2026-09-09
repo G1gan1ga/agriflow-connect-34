@@ -77,7 +77,7 @@ export function t(key: keyof typeof D | string, lang: Lang): string {
   const row = D[key];
   if (!row) return String(key);
   const i = lang === "en" ? 0 : lang === "hi" ? 1 : 2;
-  return row[i];
+  return row[i]!;
 }
 
 export const STAGES = ["booked", "checked_in", "weighed", "quality", "accepted", "paid"] as const;
@@ -94,5 +94,5 @@ export const STAGE_LABEL: Record<Stage, [string, string, string]> = {
 
 export function stageLabel(s: Stage, lang: Lang) {
   const i = lang === "en" ? 0 : lang === "hi" ? 1 : 2;
-  return STAGE_LABEL[s][i];
+  return STAGE_LABEL[s][i]!;
 }

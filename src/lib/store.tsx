@@ -93,20 +93,20 @@ function seedBookings(): Booking[] {
   const out: Booking[] = [];
   const stages: Stage[] = ["paid", "accepted", "weighed", "checked_in", "booked", "booked", "booked", "booked"];
   SEED_NAMES.forEach((n, i) => {
-    const center = CENTERS[i % CENTERS.length];
-    const stage = stages[i];
+    const center = CENTERS[i % CENTERS.length]!;
+    const stage = stages[i]!;
     const qty = 20 + i * 5;
     out.push({
       id: `b${i + 1}`,
       token: `T-${101 + i}`,
-      farmerName: n[0],
+      farmerName: n[0]!,
       farmerId: `XXXX-XXXX-${1200 + i}`,
-      village: n[1],
-      crop: CROPS[i % CROPS.length],
+      village: n[1]!,
+      crop: CROPS[i % CROPS.length]!,
       quantity: qty,
       centerId: center.id,
       date: todayISO(),
-      slot: SLOTS[i % SLOTS.length],
+      slot: SLOTS[i % SLOTS.length]!,
       stage,
       weightQuintals: STAGES.indexOf(stage) >= 2 ? qty - 0.4 : undefined,
       amount: STAGES.indexOf(stage) >= 4 ? Math.round((qty - 0.4) * 2275) : undefined,
@@ -132,7 +132,7 @@ type Store = {
   profile: Profile;
   saveProfile: (p: Profile) => void;
   bookings: Booking[];
-  myBooking?: Booking;
+  myBooking?: Booking | undefined;
   notifications: Notification[];
   nowServing: Record<string, string>;
   bookSlot: (date: string, slot: string) => void;
@@ -217,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (b.id !== id) return b;
           const i = STAGES.indexOf(b.stage);
           if (i >= STAGES.length - 1) return b;
-          const stage = STAGES[i + 1];
+          const stage = STAGES[i + 1]!;
           const weight = b.weightQuintals ?? Math.max(1, b.quantity - 0.4);
           const next: Booking = {
             ...b,
