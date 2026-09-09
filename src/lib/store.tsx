@@ -28,9 +28,9 @@ export type Booking = {
   date: string; // yyyy-mm-dd
   slot: string; // "09:00 - 10:00"
   stage: Stage;
-  weightQuintals?: number;
-  amount?: number;
-  isMe?: boolean;
+  weightQuintals?: number | undefined;
+  amount?: number | undefined;
+  isMe?: boolean | undefined;
 };
 
 export type Notification = {
