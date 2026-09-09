@@ -18,13 +18,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/farmer")({
   head: () => ({
     meta: [
-      { title: "Farmer Portal — Slot Booking & Token Tracking | Kisan Slot" },
+      { title: "Farmer Portal — Slot Booking & Token Tracking | Krishi Setu" },
       {
         name: "description",
         content:
           "Register your farmer profile, book a procurement time slot, track your live token and follow payment progress.",
       },
-      { property: "og:title", content: "Farmer Portal — Slot Booking & Token Tracking" },
+      { property: "og:title", content: "Farmer Portal — Slot Booking & Token Tracking | Krishi Setu" },
       {
         property: "og:description",
         content: "Book a procurement slot, get a token and track weighing to payment in real time.",

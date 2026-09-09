@@ -6,13 +6,13 @@ import { useApp, CENTERS } from "@/lib/store";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Kisan Slot — Procurement Slot Booking & Live Queue" },
+      { title: "Krishi Setu — Procurement Booking & Live Queue" },
       {
         name: "description",
         content:
           "Book crop procurement slots, track your live token queue and follow payment status with the Department of Consumer Affairs.",
       },
-      { property: "og:title", content: "Kisan Slot — Procurement Slot Booking & Live Queue" },
+      { property: "og:title", content: "Krishi Setu — Procurement Booking & Live Queue" },
       {
         property: "og:description",
         content: "Slot booking, live token tracking and faster payments for farmers at procurement centers.",
