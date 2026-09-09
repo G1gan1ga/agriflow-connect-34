@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/officer")({
   head: () => ({
     meta: [
-      { title: "Procurement Officer Dashboard — Token & Weighbridge | Kisan Slot" },
+      { title: "Officer Dashboard — Token & Weighbridge | Krishi Setu" },
       {
         name: "description",
         content:
           "Verify farmer tokens, log weighbridge readings, manage the gate queue and review procurement center analytics.",
       },
-      { property: "og:title", content: "Procurement Officer Dashboard" },
+      { property: "og:title", content: "Procurement Officer Dashboard | Krishi Setu" },
       {
         property: "og:description",
         content: "Token check-in, weighbridge logging, queue control and center analytics in one screen.",

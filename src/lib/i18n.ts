@@ -20,7 +20,7 @@ const D: Dict = {
     "उपभोक्ता मामले विभाग",
     "ਖਪਤਕਾਰ ਮਾਮਲੇ ਵਿਭਾਗ",
   ],
-  appName: ["Kisan Slot", "किसान स्लॉट", "ਕਿਸਾਨ ਸਲਾਟ"],
+  appName: ["Krishi Setu", "कृषि सेतु", "ਕ੍ਰਿਸ਼ੀ ਸੇਤੂ"],
   tagline: [
     "Book a procurement slot. Skip the queue. Get paid faster.",
     "खरीद स्लॉट बुक करें। कतार से बचें। भुगतान जल्दी पाएं।",
