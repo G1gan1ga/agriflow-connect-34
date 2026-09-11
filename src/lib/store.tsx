@@ -321,9 +321,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (i < 0 || i >= STAGES.length - 1) return;
       const stage = STAGES[i + 1]!;
       const weight = r.weight_quintals ?? Math.max(1, Number(r.quantity) - 0.4);
-      const patch: Record<string, unknown> = { stage };
-      if (stage === "weighed") patch["weight_quintals"] = weight;
-      if (stage === "accepted") patch["amount"] = Math.round(weight * MSP);
+      const patch: { stage: string; weight_quintals?: number; amount?: number } = { stage };
+      if (stage === "weighed") patch.weight_quintals = weight;
+      if (stage === "accepted") patch.amount = Math.round(weight * MSP);
       const { error } = await supabase.from("bookings").update(patch).eq("id", id);
       if (error) {
         notify(`Update failed: ${error.message}`, "App");
@@ -349,8 +349,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setWeight = useCallback(
     async (id: string, weight: number) => {
       const r = rows.find((x) => x.id === id);
-      const patch: Record<string, unknown> = { weight_quintals: weight };
-      if (r && STAGES.indexOf(r.stage as Stage) < 2) patch["stage"] = "weighed";
+      const patch: { weight_quintals: number; stage?: string } = { weight_quintals: weight };
+      if (r && STAGES.indexOf(r.stage as Stage) < 2) patch.stage = "weighed";
       await supabase.from("bookings").update(patch).eq("id", id);
       await load();
     },
