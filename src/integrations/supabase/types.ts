@@ -14,7 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          amount: number | null
+          booking_date: string
+          center_id: string
+          created_at: string
+          crop: string
+          farmer_id: string
+          id: string
+          quantity: number
+          slot: string
+          stage: string
+          token: string | null
+          token_no: number | null
+          updated_at: string
+          weight_quintals: number | null
+        }
+        Insert: {
+          amount?: number | null
+          booking_date: string
+          center_id: string
+          created_at?: string
+          crop: string
+          farmer_id: string
+          id?: string
+          quantity?: number
+          slot: string
+          stage?: string
+          token?: string | null
+          token_no?: number | null
+          updated_at?: string
+          weight_quintals?: number | null
+        }
+        Update: {
+          amount?: number | null
+          booking_date?: string
+          center_id?: string
+          created_at?: string
+          crop?: string
+          farmer_id?: string
+          id?: string
+          quantity?: number
+          slot?: string
+          stage?: string
+          token?: string | null
+          token_no?: number | null
+          updated_at?: string
+          weight_quintals?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      farmers: {
+        Row: {
+          aadhaar: string
+          center_id: string
+          created_at: string
+          crop: string
+          id: string
+          land_size: number
+          mobile: string | null
+          name: string
+          quantity: number
+          updated_at: string
+          village: string | null
+        }
+        Insert: {
+          aadhaar: string
+          center_id: string
+          created_at?: string
+          crop?: string
+          id?: string
+          land_size?: number
+          mobile?: string | null
+          name: string
+          quantity?: number
+          updated_at?: string
+          village?: string | null
+        }
+        Update: {
+          aadhaar?: string
+          center_id?: string
+          created_at?: string
+          crop?: string
+          id?: string
+          land_size?: number
+          mobile?: string | null
+          name?: string
+          quantity?: number
+          updated_at?: string
+          village?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
