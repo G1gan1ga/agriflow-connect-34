@@ -165,11 +165,14 @@ function ProfileForm() {
 }
 
 function Booking() {
-  const { lang, profile, bookSlot, slotCount, myBooking, cancelMyBooking } = useApp();
+  const { lang, profile, hasProfile, bookSlot, slotCount, myBooking, cancelMyBooking } = useApp();
   const dates = [0, 1, 2, 3, 4].map((i) => todayISO(i));
   const [date, setDate] = useState(dates[0]!);
   const [slot, setSlot] = useState<string | null>(null);
-  const center = CENTERS.find((c) => c.id === profile.centerId)!;
+  const center = CENTERS.find((c) => c.id === profile.centerId) ?? CENTERS[0]!;
+
+  if (!hasProfile)
+    return <Empty text="Fill in and save your farmer profile first — your details are needed to issue a token." />;
 
   return (
     <div className="space-y-4">
