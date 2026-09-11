@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BellRing,
   CalendarDays,
@@ -86,16 +86,23 @@ const inputCls =
   "w-full rounded-xl border-2 border-input bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary";
 
 function ProfileForm() {
-  const { lang, profile, saveProfile, notify } = useApp();
+  const { lang, profile, hasProfile, saveProfile, notify } = useApp();
   const [draft, setDraft] = useState<Profile>(profile);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (hasProfile) setDraft(profile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasProfile, profile.farmerId]);
   const set = (patch: Partial<Profile>) => setDraft((d) => ({ ...d, ...patch }));
 
   return (
     <form
       className="grid gap-4 rounded-2xl border-2 bg-card p-5 sm:grid-cols-2"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        saveProfile(draft);
+        setSaving(true);
+        await saveProfile(draft);
+        setSaving(false);
         notify(t("saved", lang), "App");
       }}
     >
@@ -147,8 +154,11 @@ function ProfileForm() {
           onChange={(e) => set({ quantity: Number(e.target.value) })}
         />
       </Field>
-      <button className="rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground sm:col-span-2">
-        {t("save", lang)}
+      <button
+        disabled={saving}
+        className="rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-60 sm:col-span-2"
+      >
+        {saving ? "Saving…" : t("save", lang)}
       </button>
     </form>
   );
