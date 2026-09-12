@@ -7,12 +7,23 @@ import {
   Circle,
   IndianRupee,
   MessageSquare,
+  ShieldCheck,
   Timer,
   User,
   Users,
 } from "lucide-react";
 import { STAGES, stageLabel, t } from "@/lib/i18n";
-import { CENTERS, CROPS, SLOTS, todayISO, useApp, type Profile } from "@/lib/store";
+import {
+  CENTERS,
+  CROPS,
+  DEMO_OTP,
+  SLOTS,
+  isValidAadhaar,
+  normalizeAadhaar,
+  todayISO,
+  useApp,
+  type Profile,
+} from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/farmer")({
@@ -38,13 +49,95 @@ export const Route = createFileRoute("/farmer")({
 
 const TABS = ["profile", "bookSlot", "liveQueue", "payments", "alerts"] as const;
 
+function AadhaarLogin() {
+  const { login, notify } = useApp();
+  const [aadhaar, setAadhaar] = useState("");
+  const [otp, setOtp] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="mx-auto max-w-md space-y-4 rounded-2xl border-2 bg-card p-6">
+      <h1 className="flex items-center gap-2 text-xl font-black text-foreground">
+        <ShieldCheck className="h-6 w-6 text-primary" aria-hidden /> Aadhaar sign-in
+      </h1>
+      <p className="text-sm text-muted-foreground">
+        Farmers sign in with their 12-digit Aadhaar number and a one-time password sent to the linked mobile.
+      </p>
+      <Field label="Aadhaar number">
+        <input
+          className={inputCls}
+          inputMode="numeric"
+          maxLength={14}
+          placeholder="1234 5678 9012"
+          value={aadhaar}
+          onChange={(e) => setAadhaar(e.target.value)}
+        />
+      </Field>
+
+      {!sent ? (
+        <button
+          className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
+          disabled={!isValidAadhaar(aadhaar)}
+          onClick={() => {
+            setSent(true);
+            setError(null);
+            notify(`OTP ${DEMO_OTP} sent to the mobile linked with Aadhaar ending ${normalizeAadhaar(aadhaar).slice(-4)}.`);
+          }}
+        >
+          Send OTP
+        </button>
+      ) : (
+        <>
+          <Field label="One-time password">
+            <input
+              className={inputCls}
+              inputMode="numeric"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+            />
+          </Field>
+          <p className="text-xs text-muted-foreground">Demo OTP: {DEMO_OTP}</p>
+          <button
+            className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-60"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              const ok = await login(aadhaar, otp);
+              setBusy(false);
+              if (!ok) setError("Incorrect OTP. Please try again.");
+            }}
+          >
+            {busy ? "Verifying…" : "Verify & continue"}
+          </button>
+        </>
+      )}
+      {error && <p className="text-sm font-bold text-destructive">{error}</p>}
+    </div>
+  );
+}
+
 function FarmerPage() {
-  const { lang } = useApp();
+  const { lang, isAuthenticated, aadhaar, logout } = useApp();
   const [tab, setTab] = useState<(typeof TABS)[number]>("bookSlot");
+
+  if (!isAuthenticated) return <AadhaarLogin />;
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-black text-foreground">{t("farmerPortal", lang)}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-black text-foreground">{t("farmerPortal", lang)}</h1>
+        <span className="flex items-center gap-3 text-sm">
+          <span className="flex items-center gap-1 font-bold text-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" aria-hidden /> Aadhaar ••••{aadhaar?.slice(-4)}
+          </span>
+          <button onClick={logout} className="font-bold text-destructive underline">
+            Sign out
+          </button>
+        </span>
+      </div>
       <div role="tablist" aria-label={t("farmerPortal", lang)} className="flex gap-2 overflow-x-auto pb-1">
         {TABS.map((k) => (
           <button
