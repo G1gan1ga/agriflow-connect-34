@@ -81,7 +81,20 @@ function OfficerPage() {
 function Verify({ centerId }: { centerId: string }) {
   const { lang, bookings, advance, notify } = useApp();
   const [q, setQ] = useState("");
-  const match = bookings.find((b) => b.centerId === centerId && b.token.toLowerCase() === q.trim().toLowerCase());
+  const cleanQ = q.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const match = bookings.find((b) => {
+    if (b.centerId !== centerId) return false;
+    const cleanToken = b.token.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return (
+      cleanToken === cleanQ ||
+      cleanToken.endsWith(cleanQ) ||
+      b.farmerName.toLowerCase().includes(q.trim().toLowerCase()) ||
+      b.farmerId.replace(/\D/g, "").endsWith(cleanQ)
+    );
+  });
+
+  const waitingTokens = bookings.filter((b) => b.centerId === centerId && b.stage === "booked");
 
   return (
     <div className="space-y-4">
@@ -95,32 +108,53 @@ function Verify({ centerId }: { centerId: string }) {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Enter token e.g. T-104"
+              placeholder="Enter token (e.g. KRN-104, 104) or farmer name / Aadhaar..."
               aria-label="Token number"
               className="w-full bg-transparent py-3 text-base outline-none"
             />
           </span>
         </div>
-        {q && !match && <p className="mt-3 font-bold text-destructive">No token found at this center.</p>}
+
+        {waitingTokens.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-muted-foreground">Waiting at Gate:</span>
+            {waitingTokens.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setQ(b.token)}
+                className="rounded-lg border border-input bg-background px-2 py-0.5 text-xs font-bold hover:bg-accent"
+              >
+                {b.token} ({b.farmerName.split(" ")[0]})
+              </button>
+            ))}
+          </div>
+        )}
+
+        {q && !match && <p className="mt-3 font-bold text-destructive">No matching token found at this center.</p>}
         {match && (
           <div className="mt-4 rounded-xl border-2 border-primary bg-accent p-4">
-            <p className="text-2xl font-black text-foreground">{match.token}</p>
-            <p className="text-sm text-foreground/80">
-              {match.farmerName} · {match.village} · {match.farmerId}
+            <div className="flex items-center justify-between">
+              <p className="text-3xl font-black text-foreground">{match.token}</p>
+              <span className="rounded-md bg-primary/20 px-2 py-0.5 text-xs font-black text-primary">
+                Aadhaar Verified: {match.farmerId.slice(-4)}
+              </span>
+            </div>
+            <p className="mt-1 text-sm font-semibold text-foreground/80">
+              {match.farmerName} · {match.village}
             </p>
             <p className="text-sm text-foreground/80">
-              {match.crop} · {match.quantity} quintals · {match.slot}
+              {match.crop} · Declared: {match.quantity} quintals · Slot: {match.slot}
             </p>
             <p className="mt-2 text-sm font-bold text-primary">{stageLabel(match.stage, lang)}</p>
             <button
               onClick={() => {
                 advance(match.id);
-                notify(`Officer checked in ${match.token}.`, "App");
+                notify(`Officer verified & checked in Token ${match.token} at gate.`, "App");
               }}
               disabled={match.stage !== "booked"}
-              className="mt-3 rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground disabled:opacity-50"
+              className="mt-3 rounded-xl bg-primary px-5 py-3 font-black text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {t("verifyToken", lang)}
+              ✓ {t("verifyToken", lang)} & Open Gate
             </button>
           </div>
         )}
