@@ -426,6 +426,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     callNext,
     slotCount,
     notify,
+    aadhaar,
+    isAuthenticated: aadhaar != null,
+    login,
+    logout,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
