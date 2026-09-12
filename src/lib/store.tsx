@@ -93,7 +93,17 @@ const EMPTY_PROFILE: Profile = {
   quantity: 0,
 };
 
-const ME_KEY = "krishi-setu-farmer-id";
+const AUTH_KEY = "krishi-setu-aadhaar";
+
+export const DEMO_OTP = "123456";
+
+export function normalizeAadhaar(v: string) {
+  return v.replace(/\D/g, "");
+}
+
+export function isValidAadhaar(v: string) {
+  return /^\d{12}$/.test(normalizeAadhaar(v));
+}
 
 type FarmerRow = {
   id: string;
