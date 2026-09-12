@@ -71,6 +71,12 @@ const D: Dict = {
   callNext: ["Call next token", "अगला टोकन बुलाएं", "ਅਗਲਾ ਟੋਕਨ ਸੱਦੋ"],
   advance: ["Advance stage", "अगला चरण", "ਅਗਲਾ ਪੜਾਅ"],
   language: ["Language", "भाषा", "ਭਾਸ਼ਾ"],
+  smsBooking: ["SMS / Phone Booking", "एसएमएस / फोन बुकिंग", "SMS / ਫ਼ੋਨ ਬੁਕਿੰਗ"],
+  trackAnyToken: ["Track Any Token", "टोकन ट्रैक करें", "ਟੋਕਨ ਟ੍ਰੈਕ ਕਰੋ"],
+  switchFarmer: ["Switch Farmer", "किसान बदलें", "ਕਿਸਾਨ ਬਦਲੋ"],
+  verifyAadhaar: ["Verify Aadhaar (e-KYC)", "आधार ई-केवाईसी सत्यापित करें", "ਆਧਾਰ e-KYC ਤਸਦੀਕ ਕਰੋ"],
+  aadhaarVerified: ["UIDAI e-KYC Verified", "यूआईडीएआई सत्यापित", "UIDAI ਤਸਦੀਕਸ਼ੁਦਾ"],
+  newRegistration: ["New Farmer Registration", "नया किसान पंजीकरण", "ਨਵੀਂ ਕਿਸਾਨ ਰਜਿਸਟ੍ਰੇਸ਼ਨ"],
 };
 
 export function t(key: keyof typeof D | string, lang: Lang): string {
