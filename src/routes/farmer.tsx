@@ -25,7 +25,10 @@ import { STAGES, stageLabel, t } from "@/lib/i18n";
 import {
   CENTERS,
   CROPS,
+  DEMO_OTP,
   SLOTS,
+  isValidAadhaar,
+  normalizeAadhaar,
   todayISO,
   useApp,
   type Profile,
@@ -63,16 +66,140 @@ export const Route = createFileRoute("/farmer")({
 
 const TABS = ["profile", "bookSlot", "liveQueue", "payments", "smsBooking", "alerts"] as const;
 
+function AadhaarLogin() {
+  const { login, farmers } = useApp();
+  const [aadhaar, setAadhaar] = useState("");
+  const [otp, setOtp] = useState("123456");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<"aadhaar" | "otp">("aadhaar");
+
+  const handleContinue = () => {
+    const clean = normalizeAadhaar(aadhaar);
+    if (!isValidAadhaar(clean)) {
+      setError("Please enter a valid 12-digit Aadhaar number.");
+      return;
+    }
+    setError(null);
+    setStep("otp");
+  };
+
+  const handleLogin = async () => {
+    setBusy(true);
+    setError(null);
+    const ok = await login(aadhaar, otp);
+    setBusy(false);
+    if (!ok) setError("Invalid OTP. For demo presentation, enter 123456.");
+  };
+
+  return (
+    <div className="mx-auto max-w-md space-y-5 rounded-2xl border-2 bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
+          <ShieldCheck className="h-7 w-7" aria-hidden />
+        </span>
+        <div>
+          <h1 className="text-xl font-black text-foreground">Aadhaar e-KYC Sign-in</h1>
+          <p className="text-xs text-muted-foreground">National Farmer Identity Verification</p>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Enter your 12-digit Aadhaar number to access slot booking and track your procurement tokens.
+      </p>
+
+      {step === "aadhaar" ? (
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-foreground">Aadhaar Number</span>
+            <input
+              className={inputCls}
+              inputMode="numeric"
+              maxLength={14}
+              placeholder="2841-7712-1200"
+              value={aadhaar}
+              onChange={(e) => setAadhaar(formatAadhaar(e.target.value))}
+            />
+          </label>
+
+          <button
+            className="w-full rounded-xl bg-primary px-5 py-3.5 font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            disabled={!isValidAadhaar(normalizeAadhaar(aadhaar))}
+            onClick={handleContinue}
+          >
+            Continue with OTP
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-xl border bg-muted p-3 text-xs">
+            <p className="font-semibold text-foreground">
+              Simulated OTP sent to mobile linked with Aadhaar ••••{normalizeAadhaar(aadhaar).slice(-4)}
+            </p>
+            <div className="mt-2 flex items-center justify-between font-mono text-primary">
+              <span>Demo OTP:</span>
+              <span className="font-black text-sm tracking-widest">{DEMO_OTP}</span>
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-bold text-foreground">Enter 6-digit OTP</span>
+            <input
+              className={cn(inputCls, "text-center font-mono text-2xl font-black tracking-widest")}
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+            />
+          </label>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setStep("aadhaar")}
+              className="rounded-xl border border-input px-4 py-2.5 text-xs font-bold hover:bg-accent"
+            >
+              Back
+            </button>
+            <button
+              className="flex-1 rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              disabled={busy || otp.length < 6}
+              onClick={handleLogin}
+            >
+              {busy ? "Verifying…" : "Verify & Sign In"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-xs font-bold text-destructive">{error}</p>}
+
+      <div className="border-t pt-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Quick Demo Login (Pre-registered Farmers):
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {farmers.slice(0, 4).map((f) => (
+            <button
+              key={f.id}
+              onClick={async () => {
+                await login(f.aadhaar, DEMO_OTP);
+              }}
+              className="rounded-lg border border-input bg-background px-2.5 py-1 text-xs font-bold hover:bg-accent"
+            >
+              {f.name} (••••{f.aadhaar.slice(-4)})
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FarmerPage() {
-  const { lang, activeBooking, profile, hasProfile } = useApp();
+  const { lang, isAuthenticated, aadhaar, logout, activeBooking, profile, hasProfile } = useApp();
   const [tab, setTab] = useState<(typeof TABS)[number]>("profile");
 
-  // Auto-switch to live queue or booking if profile is already loaded
-  useEffect(() => {
-    if (activeBooking) {
-      // Keep user choice or default
-    }
-  }, [activeBooking]);
+  if (!isAuthenticated) return <AadhaarLogin />;
 
   return (
     <div className="space-y-5">
@@ -84,23 +211,19 @@ function FarmerPage() {
           </p>
         </div>
 
-        {/* Status Indicator */}
-        {hasProfile ? (
-          <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground">
-            <User className="h-4 w-4 text-primary" />
-            <span className="font-bold">{profile.name}</span>
-            <span className="text-muted-foreground">({profile.farmerId.slice(-4)})</span>
-            {profile.aadhaarVerified && (
-              <span className="inline-flex items-center gap-1 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-black text-primary">
-                <ShieldCheck className="h-3 w-3" /> e-KYC
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="rounded-xl border border-dashed px-3 py-1 text-xs font-semibold text-muted-foreground">
-            New session: Register or look up token below
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
+            <span>Aadhaar ••••{aadhaar ? normalizeAadhaar(aadhaar).slice(-4) : profile.farmerId.slice(-4)}</span>
+            {hasProfile && <span className="text-muted-foreground">({profile.name})</span>}
           </span>
-        )}
+          <button
+            onClick={logout}
+            className="rounded-lg border border-destructive/30 px-2.5 py-1 text-xs font-bold text-destructive hover:bg-destructive/10"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       {/* Global Token / Farmer Switcher Bar */}
@@ -246,8 +369,11 @@ const inputCls =
   "w-full rounded-xl border-2 border-input bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary";
 
 function ProfileForm({ onSaved }: { onSaved?: () => void }) {
-  const { lang, profile, hasProfile, saveProfile, notify } = useApp();
-  const [draft, setDraft] = useState<Profile>(profile);
+  const { lang, profile, hasProfile, saveProfile, notify, aadhaar } = useApp();
+  const [draft, setDraft] = useState<Profile>({
+    ...profile,
+    farmerId: profile.farmerId || aadhaar || "",
+  });
   const [saving, setSaving] = useState(false);
 
   // Aadhaar OTP & Verification State
@@ -258,8 +384,12 @@ function ProfileForm({ onSaved }: { onSaved?: () => void }) {
   const [otpError, setOtpError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (hasProfile) setDraft(profile);
-  }, [hasProfile, profile]);
+    if (hasProfile) {
+      setDraft(profile);
+    } else if (aadhaar) {
+      setDraft((d) => ({ ...d, farmerId: aadhaar }));
+    }
+  }, [hasProfile, profile, aadhaar]);
 
   const set = (patch: Partial<Profile>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -277,7 +407,7 @@ function ProfileForm({ onSaved }: { onSaved?: () => void }) {
       notify(res.message, "App");
       return;
     }
-    setGeneratedOtp(res.otp ?? "123456");
+    setGeneratedOtp(res.otp ?? DEMO_OTP);
     setOtpMessage(res.message);
     setOtpError(null);
     setShowOtpModal(true);
@@ -490,7 +620,7 @@ function ProfileForm({ onSaved }: { onSaved?: () => void }) {
                 maxLength={6}
                 value={otpInput}
                 onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                placeholder="123456"
+                placeholder={DEMO_OTP}
                 className="mt-1 w-full rounded-xl border-2 border-input bg-background px-4 py-3 text-center font-mono text-2xl font-black tracking-widest outline-none focus:border-primary"
               />
               {otpError && <p className="mt-1 text-xs font-bold text-destructive">{otpError}</p>}
@@ -499,7 +629,7 @@ function ProfileForm({ onSaved }: { onSaved?: () => void }) {
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
-                onClick={() => setOtpInput(generatedOtp || "123456")}
+                onClick={() => setOtpInput(generatedOtp || DEMO_OTP)}
                 className="rounded-xl border border-input px-3 py-2 text-xs font-bold hover:bg-accent"
               >
                 Auto-fill

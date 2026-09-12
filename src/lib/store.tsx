@@ -98,6 +98,17 @@ const EMPTY_PROFILE: Profile = {
 };
 
 const ME_KEY = "krishi-setu-farmer-id";
+const AUTH_KEY = "krishi-setu-aadhaar";
+
+export const DEMO_OTP = "123456";
+
+export function normalizeAadhaar(v: string) {
+  return v.replace(/\D/g, "");
+}
+
+export function isValidAadhaar(v: string) {
+  return /^\d{12}$/.test(normalizeAadhaar(v));
+}
 
 export type FarmerRow = {
   id: string;
@@ -148,6 +159,11 @@ type Store = {
   callNext: (centerId: string) => Promise<void>;
   slotCount: (centerId: string, date: string, slot: string) => number;
   notify: (text: string, channel?: "SMS" | "App") => void;
+  // Aadhaar Login Authentication
+  aadhaar: string | null;
+  isAuthenticated: boolean;
+  login: (aadhaar: string, otp: string) => Promise<boolean>;
+  logout: () => void;
   // Multi-Farmer and Token Switching
   switchFarmer: (farmerId: string) => void;
   startNewRegistration: () => void;
@@ -171,6 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [farmers, setFarmers] = useState<FarmerRow[]>([]);
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [myFarmerId, setMyFarmerId] = useState<string | null>(null);
+  const [aadhaar, setAadhaar] = useState<string | null>(null);
   const [trackedBookingId, setTrackedBookingId] = useState<string | null>(null);
   const [verifiedAadhaars, setVerifiedAadhaars] = useState<Record<string, boolean>>({});
 
@@ -200,6 +217,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedId = localStorage.getItem(ME_KEY);
     if (savedId) setMyFarmerId(savedId);
+    const savedAadhaar = localStorage.getItem(AUTH_KEY);
+    if (savedAadhaar) setAadhaar(savedAadhaar);
+
     void load();
     const channel = supabase
       .channel("krishi-setu")
@@ -213,7 +233,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const farmerById = useMemo(() => new Map(farmers.map((f) => [f.id, f])), [farmers]);
 
-  const me = myFarmerId ? farmerById.get(myFarmerId) : undefined;
+  const login = useCallback(
+    async (rawAadhaar: string, otp: string) => {
+      const id = normalizeAadhaar(rawAadhaar);
+      if (!isValidAadhaar(id) || otp.trim() !== DEMO_OTP) return false;
+      localStorage.setItem(AUTH_KEY, id);
+      setAadhaar(id);
+      const f = farmers.find((x) => x.aadhaar.replace(/\D/g, "") === id);
+      if (f) {
+        localStorage.setItem(ME_KEY, f.id);
+        setMyFarmerId(f.id);
+      }
+      await load();
+      notify(`Aadhaar ending in ${id.slice(-4)} verified. You are signed in.`, "App");
+      return true;
+    },
+    [farmers, load, notify],
+  );
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(ME_KEY);
+    setAadhaar(null);
+    setMyFarmerId(null);
+    setTrackedBookingId(null);
+  }, []);
+
+  const me = useMemo(() => {
+    if (aadhaar) {
+      const cleanAadhaar = normalizeAadhaar(aadhaar);
+      const found = farmers.find((f) => normalizeAadhaar(f.aadhaar) === cleanAadhaar);
+      if (found) return found;
+    }
+    if (myFarmerId) {
+      return farmerById.get(myFarmerId);
+    }
+    return undefined;
+  }, [aadhaar, myFarmerId, farmers, farmerById]);
 
   const profile: Profile = me
     ? {
@@ -235,7 +291,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const f = farmerById.get(r.farmer_id);
         const center = CENTERS.find((c) => c.id === r.center_id);
         const centerPrefix = center?.code ?? "MND";
-        // Format token with smart prefix if just a number
         const rawToken = r.token ?? `T-${r.token_no ?? 100}`;
         const smartToken = rawToken.startsWith("T-") ? `${centerPrefix}-${rawToken.slice(2)}` : rawToken;
 
@@ -253,15 +308,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           stage: (STAGES as readonly string[]).includes(r.stage) ? (r.stage as Stage) : "booked",
           weightQuintals: r.weight_quintals == null ? undefined : Number(r.weight_quintals),
           amount: r.amount == null ? undefined : Number(r.amount),
-          isMe: myFarmerId != null && r.farmer_id === myFarmerId,
+          isMe: me != null && r.farmer_id === me.id,
         };
       }),
-    [rows, farmerById, myFarmerId],
+    [rows, farmerById, me],
   );
 
   const myBooking = useMemo(() => bookings.find((b) => b.isMe), [bookings]);
 
-  // Active booking for tracking (defaults to myBooking, or explicitly tracked token)
   const activeBooking = useMemo(() => {
     if (trackedBookingId) {
       return bookings.find((b) => b.id === trackedBookingId) ?? myBooking;
@@ -311,7 +365,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const row = data as FarmerRow;
       localStorage.setItem(ME_KEY, row.id);
+      localStorage.setItem(AUTH_KEY, row.aadhaar);
       setMyFarmerId(row.id);
+      setAadhaar(row.aadhaar);
       setTrackedBookingId(null);
       if (p.aadhaarVerified) {
         setVerifiedAadhaars((prev) => ({ ...prev, [p.farmerId]: true }));
@@ -321,7 +377,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [load, notify],
   );
 
-  // Switch to an existing farmer profile
   const switchFarmer = useCallback(
     (farmerId: string) => {
       localStorage.setItem(ME_KEY, farmerId);
@@ -329,27 +384,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTrackedBookingId(null);
       const f = farmers.find((x) => x.id === farmerId);
       if (f) {
+        setAadhaar(f.aadhaar);
+        localStorage.setItem(AUTH_KEY, f.aadhaar);
         notify(`Switched active profile to ${f.name}.`, "App");
       }
     },
     [farmers, notify],
   );
 
-  // Clear current active session so another person can register independently
   const startNewRegistration = useCallback(() => {
     localStorage.removeItem(ME_KEY);
+    localStorage.removeItem(AUTH_KEY);
     setMyFarmerId(null);
+    setAadhaar(null);
     setTrackedBookingId(null);
     notify("Ready for new farmer registration. Please fill details.", "App");
   }, [notify]);
 
-  // Lookup any token or Aadhaar number to view separate tracking status
   const lookupTokenOrAadhaar = useCallback(
     (query: string) => {
       const q = query.trim().toLowerCase();
       if (!q) return { found: false };
 
-      // Check bookings by token
       const foundBooking = bookings.find(
         (b) =>
           b.token.toLowerCase() === q ||
@@ -359,12 +415,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (foundBooking) {
         setTrackedBookingId(foundBooking.id);
         const f = farmers.find((x) => x.aadhaar === foundBooking.farmerId);
-        if (f) setMyFarmerId(f.id);
+        if (f) {
+          setMyFarmerId(f.id);
+          setAadhaar(f.aadhaar);
+        }
         notify(`Tracking loaded for Token ${foundBooking.token} (${foundBooking.farmerName})`, "App");
         return { found: true, booking: foundBooking, farmer: f };
       }
 
-      // Check farmers by Aadhaar or Mobile
       const cleanDigits = q.replace(/\D/g, "");
       const foundFarmer = farmers.find(
         (f) =>
@@ -374,6 +432,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (foundFarmer) {
         setMyFarmerId(foundFarmer.id);
+        setAadhaar(foundFarmer.aadhaar);
         const b = bookings.find((x) => x.farmerId === foundFarmer.aadhaar);
         if (b) setTrackedBookingId(b.id);
         notify(`Profile loaded for ${foundFarmer.name} (Aadhaar ending in ${foundFarmer.aadhaar.slice(-4)})`, "App");
@@ -422,7 +481,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [me, load, notify],
   );
 
-  // SMS Booking for Farmers without Smartphones
   const bookViaSms = useCallback(
     async (params: {
       mobile: string;
@@ -437,7 +495,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const farmerName = params.name?.trim() || `Kisan (${cleanMobile.slice(-4)})`;
       const village = params.village?.trim() || "Rural Center";
 
-      // Check if farmer exists by mobile
       let farmer = farmers.find((f) => f.mobile && f.mobile.replace(/\D/g, "") === cleanMobile);
 
       if (!farmer) {
@@ -463,7 +520,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         farmer = newF as FarmerRow;
       }
 
-      // Find earliest available slot today
       const today = todayISO(0);
       let selectedSlot = SLOTS[0]!;
       for (const s of SLOTS) {
@@ -474,7 +530,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Delete prior booking for this farmer
       await supabase.from("bookings").delete().eq("farmer_id", farmer.id);
 
       const { data: bData, error: bErr } = await supabase
@@ -498,19 +553,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const bRow = bData as BookingRow;
       const tokenFormatted = `${center.code}-${bRow.token_no ?? bRow.token?.replace("T-", "") ?? "100"}`;
 
-      // Inbound SMS simulation
       notify(
         `Inbound SMS from +91-${cleanMobile.slice(-10)}: "BOOK ${center.code} ${params.crop.toUpperCase()} ${params.quantity}Q"`,
         "SMS",
       );
 
-      // Automated Outbound confirmation SMS
       const replySms = `Krishi Setu: Aapka token ${tokenFormatted} pakka ho gaya hai. Mandi: ${center.name}, Samay: ${selectedSlot} aaj (${today}). Kripya samay par tractor le kar pahuchein.`;
       notify(replySms, "SMS");
 
-      // Auto-set as tracked so they can see it
       localStorage.setItem(ME_KEY, farmer.id);
+      localStorage.setItem(AUTH_KEY, farmer.aadhaar);
       setMyFarmerId(farmer.id);
+      setAadhaar(farmer.aadhaar);
       setTrackedBookingId(bRow.id);
       await load();
 
@@ -550,7 +604,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const center = CENTERS.find((c) => c.id === r.center_id);
       const displayToken = `${center?.code ?? "MND"}-${r.token_no ?? r.token?.replace("T-", "") ?? "100"}`;
-      if (myFarmerId && r.farmer_id === myFarmerId) {
+      if (me && r.farmer_id === me.id) {
         const amount = Math.round(weight * MSP).toLocaleString("en-IN");
         const msg: Record<Stage, string> = {
           booked: "Slot booked.",
@@ -564,7 +618,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       await load();
     },
-    [rows, myFarmerId, load, notify],
+    [rows, me, load, notify],
   );
 
   const setWeight = useCallback(
@@ -591,11 +645,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await advance(next.id);
       const center = CENTERS.find((c) => c.id === centerId);
       const tokenDisplay = `${center?.code ?? "MND"}-${next.token_no ?? next.token?.replace("T-", "") ?? "100"}`;
-      if (myFarmerId && next.farmer_id === myFarmerId) {
+      if (me && next.farmer_id === me.id) {
         notify(`Your token ${tokenDisplay} is being called. Please proceed to the gate.`, "App");
       }
     },
-    [rows, advance, myFarmerId, notify],
+    [rows, advance, me, notify],
   );
 
   const value: Store = {
@@ -620,6 +674,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     callNext,
     slotCount,
     notify,
+    aadhaar,
+    isAuthenticated: aadhaar != null,
+    login,
+    logout,
     switchFarmer,
     startNewRegistration,
     lookupTokenOrAadhaar,

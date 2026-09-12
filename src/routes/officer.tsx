@@ -26,11 +26,11 @@ export const Route = createFileRoute("/officer")({
   component: OfficerPage,
 });
 
-const TABS = ["verifyToken", "weighbridge", "gateQueue", "analytics"] as const;
+const TABS = ["verifyToken", "weighbridge", "analytics"] as const;
 
 function OfficerPage() {
   const { lang } = useApp();
-  const [tab, setTab] = useState<(typeof TABS)[number]>("gateQueue");
+  const [tab, setTab] = useState<(typeof TABS)[number]>("verifyToken");
   const [centerId, setCenterId] = useState(CENTERS[0]!.id);
 
   return (
@@ -72,7 +72,7 @@ function OfficerPage() {
 
       {tab === "verifyToken" && <Verify centerId={centerId} />}
       {tab === "weighbridge" && <Weighbridge centerId={centerId} />}
-      {tab === "gateQueue" && <Gate centerId={centerId} />}
+      
       {tab === "analytics" && <Analytics centerId={centerId} />}
     </div>
   );
@@ -204,55 +204,6 @@ function Weighbridge({ centerId }: { centerId: string }) {
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function Gate({ centerId }: { centerId: string }) {
-  const { lang, bookings, nowServing, callNext } = useApp();
-  const rows = bookings.filter((b) => b.centerId === centerId).sort((a, b) => a.slot.localeCompare(b.slot));
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="rounded-2xl border-2 border-primary bg-primary p-5 text-primary-foreground">
-          <p className="text-xs font-bold uppercase tracking-wide opacity-90">{t("nowServing", lang)}</p>
-          <p className="text-5xl font-black">{nowServing[centerId] ?? "—"}</p>
-        </div>
-        <button
-          onClick={() => callNext(centerId)}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-primary bg-background px-6 py-5 text-lg font-black text-primary hover:bg-accent"
-        >
-          <DoorOpen className="h-5 w-5" aria-hidden />
-          {t("callNext", lang)}
-        </button>
-      </div>
-
-      <div className="rounded-2xl border-2 bg-card p-5">
-        <h2 className="text-lg font-black text-foreground">{t("gateQueue", lang)}</h2>
-        <ul className="mt-3 divide-y">
-          {rows.map((b) => (
-            <li key={b.id} className="flex items-center justify-between gap-3 py-3">
-              <span className="min-w-0">
-                <span className="block truncate font-bold text-foreground">
-                  {b.token} · {b.farmerName}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {b.slot} · {b.crop} · {b.quantity} q
-                </span>
-              </span>
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1 text-xs font-bold",
-                  b.stage === "paid" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-                )}
-              >
-                {stageLabel(b.stage, lang)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }
