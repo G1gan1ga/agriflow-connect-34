@@ -47,13 +47,11 @@ export const Route = createFileRoute("/farmer")({
   component: FarmerPage,
 });
 
-const TABS = ["profile", "bookSlot", "liveQueue", "payments", "alerts"] as const;
+const TABS = ["profile", "bookSlot", "payments", "alerts"] as const;
 
 function AadhaarLogin() {
-  const { login, notify } = useApp();
+  const { login } = useApp();
   const [aadhaar, setAadhaar] = useState("");
-  const [otp, setOtp] = useState("");
-  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +61,7 @@ function AadhaarLogin() {
         <ShieldCheck className="h-6 w-6 text-primary" aria-hidden /> Aadhaar sign-in
       </h1>
       <p className="text-sm text-muted-foreground">
-        Farmers sign in with their 12-digit Aadhaar number and a one-time password sent to the linked mobile.
+        Farmers sign in with their 12-digit Aadhaar number.
       </p>
       <Field label="Aadhaar number">
         <input
@@ -76,44 +74,19 @@ function AadhaarLogin() {
         />
       </Field>
 
-      {!sent ? (
-        <button
-          className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
-          disabled={!isValidAadhaar(aadhaar)}
-          onClick={() => {
-            setSent(true);
-            setError(null);
-            notify(`OTP ${DEMO_OTP} sent to the mobile linked with Aadhaar ending ${normalizeAadhaar(aadhaar).slice(-4)}.`);
-          }}
-        >
-          Send OTP
-        </button>
-      ) : (
-        <>
-          <Field label="One-time password">
-            <input
-              className={inputCls}
-              inputMode="numeric"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-            />
-          </Field>
-          <p className="text-xs text-muted-foreground">Demo OTP: {DEMO_OTP}</p>
-          <button
-            className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-60"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              const ok = await login(aadhaar, otp);
-              setBusy(false);
-              if (!ok) setError("Incorrect OTP. Please try again.");
-            }}
-          >
-            {busy ? "Verifying…" : "Verify & continue"}
-          </button>
-        </>
-      )}
+      <button
+        className="w-full rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground disabled:opacity-50"
+        disabled={busy || !isValidAadhaar(aadhaar)}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          const ok = await login(aadhaar);
+          setBusy(false);
+          if (!ok) setError("Please enter a valid 12-digit Aadhaar number.");
+        }}
+      >
+        {busy ? "Signing in…" : "Continue"}
+      </button>
       {error && <p className="text-sm font-bold text-destructive">{error}</p>}
     </div>
   );
@@ -352,60 +325,6 @@ function Booking() {
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function QueueTracker() {
-  const { lang, myBooking, bookings, nowServing } = useApp();
-  if (!myBooking) return <Empty text={t("noBooking", lang)} />;
-
-  const serving = nowServing[myBooking.centerId];
-  const ahead = bookings.filter(
-    (b) =>
-      b.centerId === myBooking.centerId &&
-      b.stage === "booked" &&
-      !b.isMe &&
-      b.slot.localeCompare(myBooking.slot) <= 0,
-  ).length;
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border-2 border-primary bg-primary p-6 text-center text-primary-foreground">
-        <p className="text-sm font-bold uppercase tracking-wide opacity-90">{t("yourToken", lang)}</p>
-        <p className="text-6xl font-black">{myBooking.token}</p>
-        <p className="mt-1 text-sm opacity-90">{myBooking.slot}</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat icon={<Timer className="h-5 w-5" aria-hidden />} label={t("nowServing", lang)} value={serving ?? "—"} />
-        <Stat icon={<Users className="h-5 w-5" aria-hidden />} label={t("aheadOfYou", lang)} value={String(ahead)} />
-        <Stat
-          icon={<Timer className="h-5 w-5" aria-hidden />}
-          label={t("estWait", lang)}
-          value={`${ahead * 12} ${t("minutes", lang)}`}
-        />
-      </div>
-      <div className="rounded-2xl border-2 bg-card p-5">
-        <h2 className="text-lg font-black text-foreground">Queue at your center</h2>
-        <ul className="mt-3 divide-y">
-          {bookings
-            .filter((b) => b.centerId === myBooking.centerId)
-            .sort((a, b) => a.slot.localeCompare(b.slot))
-            .map((b) => (
-              <li key={b.id} className="flex items-center justify-between gap-3 py-3">
-                <span className="min-w-0">
-                  <span className={cn("block truncate font-bold", b.isMe ? "text-primary" : "text-foreground")}>
-                    {b.token} · {b.isMe ? "You" : b.farmerName}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">{b.slot}</span>
-                </span>
-                <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">
-                  {stageLabel(b.stage, lang)}
-                </span>
-              </li>
-            ))}
-        </ul>
-      </div>
     </div>
   );
 }
