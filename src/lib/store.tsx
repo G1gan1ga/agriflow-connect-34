@@ -150,6 +150,10 @@ type Store = {
   callNext: (centerId: string) => Promise<void>;
   slotCount: (centerId: string, date: string, slot: string) => number;
   notify: (text: string, channel?: "SMS" | "App") => void;
+  aadhaar: string | null;
+  isAuthenticated: boolean;
+  login: (aadhaar: string, otp: string) => Promise<boolean>;
+  logout: () => void;
 };
 
 const Ctx = createContext<Store | null>(null);
