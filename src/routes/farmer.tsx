@@ -179,13 +179,14 @@ const inputCls =
   "w-full rounded-xl border-2 border-input bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary";
 
 function ProfileForm() {
-  const { lang, profile, hasProfile, saveProfile, notify } = useApp();
-  const [draft, setDraft] = useState<Profile>(profile);
+  const { lang, profile, hasProfile, saveProfile, notify, aadhaar } = useApp();
+  const [draft, setDraft] = useState<Profile>({ ...profile, farmerId: aadhaar ?? profile.farmerId });
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (hasProfile) setDraft(profile);
+    else if (aadhaar) setDraft((d) => ({ ...d, farmerId: aadhaar }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasProfile, profile.farmerId]);
+  }, [hasProfile, profile.farmerId, aadhaar]);
   const set = (patch: Partial<Profile>) => setDraft((d) => ({ ...d, ...patch }));
 
   return (
