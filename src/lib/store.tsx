@@ -163,7 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [farmers, setFarmers] = useState<FarmerRow[]>([]);
   const [rows, setRows] = useState<BookingRow[]>([]);
-  const [myFarmerId, setMyFarmerId] = useState<string | null>(null);
+  const [aadhaar, setAadhaar] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: "n1", channel: "SMS", text: "Procurement center Karnal is open 08:00-15:00 today.", time: "07:10" },
     { id: "n2", channel: "App", text: `MSP for Wheat is Rs ${MSP} per quintal this season.`, time: "07:12" },
@@ -187,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setMyFarmerId(localStorage.getItem(ME_KEY));
+    setAadhaar(localStorage.getItem(AUTH_KEY));
     void load();
     const channel = supabase
       .channel("krishi-setu")
@@ -201,7 +201,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const farmerById = useMemo(() => new Map(farmers.map((f) => [f.id, f])), [farmers]);
 
-  const me = myFarmerId ? farmerById.get(myFarmerId) : undefined;
+  const login = useCallback(
+    async (rawAadhaar: string, otp: string) => {
+      const id = normalizeAadhaar(rawAadhaar);
+      if (!isValidAadhaar(id) || otp.trim() !== DEMO_OTP) return false;
+      localStorage.setItem(AUTH_KEY, id);
+      setAadhaar(id);
+      await load();
+      notify(`Aadhaar ending ${id.slice(-4)} verified. You are signed in.`, "App");
+      return true;
+    },
+    [load, notify],
+  );
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(AUTH_KEY);
+    setAadhaar(null);
+  }, []);
+
+  const me = aadhaar ? farmers.find((f) => f.aadhaar === aadhaar) : undefined;
+  const myFarmerId = me?.id ?? null;
 
   const profile: Profile = me
     ? {
@@ -278,8 +297,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       const row = data as FarmerRow;
-      localStorage.setItem(ME_KEY, row.id);
-      setMyFarmerId(row.id);
+      localStorage.setItem(AUTH_KEY, row.aadhaar);
+      setAadhaar(row.aadhaar);
       await load();
     },
     [load, notify],
