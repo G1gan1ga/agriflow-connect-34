@@ -207,7 +207,7 @@ function ProfileForm() {
         <input className={inputCls} value={draft.name} onChange={(e) => set({ name: e.target.value })} required />
       </Field>
       <Field label={t("farmerId", lang)}>
-        <input className={inputCls} value={draft.farmerId} onChange={(e) => set({ farmerId: e.target.value })} required />
+        <input className={cn(inputCls, "bg-muted")} value={draft.farmerId} readOnly aria-readonly required />
       </Field>
       <Field label={t("mobile", lang)}>
         <input className={inputCls} value={draft.mobile} onChange={(e) => set({ mobile: e.target.value })} inputMode="tel" />
